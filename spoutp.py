@@ -9,6 +9,11 @@ import re
 import os
 import sys
 import subprocess as SP
+from itertools import chain
+
+import unittest
+
+import biolib as CSBio
 
 __author__ = 'Christian Schudoma'
 __copyright__ = 'Copyright 2014, Christian Schudoma'
@@ -17,8 +22,6 @@ __version__ = '0.1a'
 __maintainer__ = 'Christian Schudoma'
 __email__ = 'christian.schudoma@tsl.ac.uk'
 
-
-VALID_START = re.compile('[ACTG]TG')
 
 if os.uname()[1] == 'n98257':
     # local
@@ -29,78 +32,6 @@ else:
     PATH_SIGNALP = 'signalp'
     SRC_WRAPPER = 'source signalp_wrapper-3.0_node;'
     
-
-CODON_TABLE = {'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
-               'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
-               'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
-               'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
-               'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
-               'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
-               'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
-               'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
-               'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
-               'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
-               'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
-               'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
-               'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
-               'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
-               'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
-               'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
-               }
-
-def anabl_getContigsFromFASTA(fn):
-    """
-    Returns generator object to access sequences from a multi-FASTA file.
-    Originates from 'anabl' - BLAST analysing tool, hence the prefix.
-    """
-    head, seq = None, ''
-    for line in open(fn):
-        if line[0] == '>':
-            if head is not None:
-                yield (head, seq)
-            head, seq = line.strip().strip('>'), ''
-        else:
-            seq += line.strip()
-    yield (head, seq)
-
-def getCodonsFromSequence(seq):
-    """
-    Returns generator object to the codons in a nucleic acid 
-    sequence (or rather to trimers fron any sequence).
-    Truncates the sequence to a length % 3 == 0.
-    """
-    it = iter(seq)
-    for nt in it:
-        try:
-            yield nt + it.next() + it.next()
-        except:
-            pass
-    pass
-
-def isValidDNA(seq):
-    """ Checks if a string only contains valid, non-ambiguous DNA symbols. """
-    return len(re.sub('ACGT', '', seq.upper())) == 0
-def isValidRNA(seq):
-    """ Checks if a string only contains valid, non-ambiguous RNA symbols. """
-    return len(re.sub('ACGU', '', seq.upper())) == 0
-
-def translateCDS(seq, codonTable=CODON_TABLE):
-    """ 
-    Translates a CDS into a protein sequence.
-    Only takes CDS with valid start codons (NUG, with BUG => AUG) as input.
-    """
-    peptide = ''
-    checkStartCodon = True
-    for codon in getCodonsFromSequence(seq.strip().upper().replace('U', 'T')):
-        if checkStartCodon:
-            checkStartCodon = False
-            if not VALID_START.match(codon):
-                sys.stderr.write('INVALID START CODON: %s\n' % codon)
-                sys.exit(1)
-            codon = 'ATG'
-        peptide += codonTable.get(codon, 'X')
-    return peptide
-
 def callSignalP3(seqid, peptide, 
                  pathToSignalP=PATH_SIGNALP, sourceWrapper=SRC_WRAPPER):
     """
@@ -108,7 +39,8 @@ def callSignalP3(seqid, peptide,
     and catches the output.
     """
     cmd = '%s%s -t euk' % (sourceWrapper, pathToSignalP)
-    sub = SP.Popen(cmd, shell=True, stdin=SP.PIPE, stdout=SP.PIPE, stderr=SP.PIPE)
+    sub = SP.Popen(cmd, shell=True, 
+                   stdin=SP.PIPE, stdout=SP.PIPE, stderr=SP.PIPE)
     stdout, stderr = sub.communicate(input='>%s\n%s\n' % (seqid, peptide))
     return stdout
 
@@ -118,6 +50,7 @@ def processSignalP3Output(output):
     """
     output = iter(output.split('\n'))
     NN_output, HMM_output = [], []
+    NN_result, HMM_result = None, None
     isNN, isHMM = False, False
     while True:
         try:
@@ -175,8 +108,8 @@ def parseSignalPrediction(NN_result, HMM_result):
     hmm_re = re.compile('Max cleavage site probability: (?P<p>[01]\.[0-9]{3}) between pos. (?P<start>[0-9]+) and (?P<end>[0-9]+)')
     nn_re = re.compile('# Most likely cleavage site between pos. (?P<start>[0-9]+) and (?P<end>[0-9]+):')
     
-    p_hmm = hmm_re.match(HMM_result[-1])
-    p_nn = nn_re.match(NN_result[-1])
+    p_hmm = hmm_re.match(HMM_result)
+    p_nn = nn_re.match(NN_result)
     
     if p_nn:
         startNN, endNN = int(p_nn.group('start')) - 1, int(p_nn.group('end')) - 1
@@ -188,32 +121,92 @@ def parseSignalPrediction(NN_result, HMM_result):
         startHMM, endHMM = None, None
     
     return startNN, endNN, startHMM, endHMM
+
+
+['>gi|71896386|ref|NM_0  length = 150', 
+ '# Measure  Position  Value  Cutoff  signal peptide?', 
+ '  max. C    26       0.838   0.32   YES', 
+ '  max. Y    26       0.858   0.33   YES', 
+ '  max. S    14       0.998   0.87   YES', 
+ '  mean S     1-25    0.962   0.48   YES', 
+ '       D     1-25    0.910   0.43   YES', 
+ '# Most likely cleavage site between pos. 25 and 26: LSA-RK']
+
+def parseSignalScores(NN_scores, HMM_scores):
+    NN_re = re.compile('(?P<pos>[0-9-]+)\s+(?P<val>[01]\.[0-9]{3})\s+[01]\.[0-9]+\s+(?P<decision>Y|N)')
+    NN_results = [NN_re.search(line) for line in NN_scores]
+    HMM_results = ['Q' if HMM_scores[0] == 'Prediction: Non-secretory protein' 
+                   else 'S']
+    HMM_results.append(float(HMM_scores[-1].split(':')[1].strip().split()[0]))
+    HMM_results.append(HMM_scores[-1][HMM_scores[-1].rfind(' '):])
+    HMM_results.append('Y' if HMM_results[-2] > 0.5 else 'N')
+    HMM_results.append(float(HMM_scores[1].split(':')[1].strip()))
+    HMM_results.append('Y' if HMM_results[-1] > 0.5 else 'N')
+
+    return list(chain.from_iterable([res.groups() if res is not None else ('','','')
+                                for res in NN_results])), HMM_results
     
 
-def main(argv):
+def processFile(filename):
     firstPositive = True
-    header = ['#SeqID', 'NA_Seq', 'Pep_Seq',
-              'Pos_before_CleavageSite(NN)',
-              'Pos_after_CleavageSite(NN)',
-              'CleavageSite(NN)',
-              'NA_Seq_w/o_SigP(NN)',
-              # 'Pos_before_CleavageSite(HMM)',
-              # 'Pos_after_CleavageSite(HMM)',
-              # 'CleavageSite(HMM)',
-              # 'NA_Seq_w/o_SigP(HMM)',
-              ]
-    outSummary = open(argv[0] + '.signal_peptides.tsv', 'wb')
+    predHeader = ['#SeqID', 'NA_Seq', 'Pep_Seq',
+                  'Pos_before_CleavageSite(NN)',
+                  'Pos_after_CleavageSite(NN)',
+                  'CleavageSite(NN)',
+                  'NA_Seq_w/o_SigP(NN)',
+                  # 'Pos_before_CleavageSite(HMM)',
+                  # 'Pos_after_CleavageSite(HMM)',
+                  # 'CleavageSite(HMM)',
+                  # 'NA_Seq_w/o_SigP(HMM)',
+                  ]
+    scoreHeader = ['#SeqID',
+                   'NN_Cmax_score', 'NN_Cmax_pos', 'NN_Cmax_pred',
+                   'NN_Ymax_score', 'NN_Ymax_pos', 'NN_Ymax_pred',
+                   'NN_Smax_score', 'NN_Smax_pos', 'NN_Smax_pred',
+                   'NN_Smean_score', 'NN_Smean_pos', 'NN_Smean_pred',
+                   'NN_D_score', 'NN_D_pos', 'NN_D_pred',
+                   'HMM_type',
+                   'HMM_Cmax_score', 'HMM_Cmax_pos', 'HMM_Cmax_pred',
+                   'HMM_Sprob_score', 'HMM_Sprob_pred'
+                   ]
+    outSummary, outScores = None, None
 
-    for seqid, na_seq in anabl_getContigsFromFASTA(argv[0]):
-        aa_seq = translateCDS(na_seq)        
+    for seqid, na_seq in CSBio.anabl_getContigsFromFASTA(filename):
+        try:
+            aa_seq = CSBio.translateCDS(na_seq)        
+        except:
+            aa_seq = na_seq
+            na_seq = 'N' * len(na_seq) * 3
         output = callSignalP3(seqid, aa_seq)
         NNo, NNr, HMMo, HMMr = processSignalP3Output(output)
-        startNN, endNN, startHMM, endHMM = parseSignalPrediction(NNr, HMMr)
+
+        # print HMMo
+        # print HMMr
+        try:
+            startNN, endNN, startHMM, endHMM = parseSignalPrediction(NNr[-1], 
+                                                                     HMMr[-1])
+        except:
+            continue
+        try:
+            scoresNN, scoresHMM = parseSignalScores(NNr[2:-1], HMMr[1:])
+        except:
+            continue
+
+        if outSummary is None and outScores is None:
+            outSummary = open(filename + '.signal_peptides.tsv', 'wb')
+            outScores = open(filename + '.signal_scores.tsv', 'wb')
+
+
+        if scoresNN is not None and scoresHMM is not None:
+            if firstPositive:
+                outScores.write('\t'.join(scoreHeader) + '\n')
+            outScores.write('\t'.join(map(str, [seqid] + scoresNN + scoresHMM)) + '\n')
+            
 
         if startNN is not None and startHMM is not None:
             if firstPositive:
                 firstPositive = False
-                outSummary.write('\t'.join(header) + '\n')
+                outSummary.write('\t'.join(predHeader) + '\n')
 
             # 0123456789012345678901234-56
             # MVHATSPLLLLLLLSLALVAPSLSA-RK
@@ -228,8 +221,26 @@ def main(argv):
                    ]
             outSummary.write('\t'.join(map(str, row)) + '\n')
 
-    outSummary.close()
+    try:
+        outScores.close()
+        outSummary.close()
+    except:
+        pass
     pass
+
+
+####
+
+class spoutpTests(unittest.TestCase):
+    pass
+
+
+
+def main(argv):
+    if argv[0] == '--TEST':
+        unittest.main()
+    else:
+        processFile(argv[0])
 
 
 
