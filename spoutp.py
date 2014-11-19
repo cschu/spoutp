@@ -175,6 +175,9 @@ def processFile(filename):
         try:
             aa_seq = CSBio.translateCDS(na_seq)        
         except:
+            # this allows to take peptide sequences as input
+            # not the best style
+            # in that case, the na_seq will be generic and thus unusable
             aa_seq = na_seq
             na_seq = 'N' * len(na_seq) * 3
         output = callSignalP3(seqid, aa_seq)
