@@ -241,19 +241,22 @@ def processMultiFile(filename):
         except:
             continue
 
-        if outSummary is None and outScores is None:
-            outSummary = open(filename + '.signal_peptides.tsv', 'wb')
-            outScores = open(filename + '.signal_scores.tsv', 'wb')
-            
+        # if outSummary is None and outScores is None:
+        #    outSummary = open(filename + '.signal_peptides.tsv', 'wb')
+        #    outScores = open(filename + '.signal_scores.tsv', 'wb')            
             
         if scoresNN is not None and scoresHMM is not None:
-            if firstPositive:
+            # if firstPositive:
+            if outScores is None:
+                outScores = open(filename + '.signal_scores.tsv', 'wb')
                 outScores.write('\t'.join(SCORE_HEADER) + '\n')
             outScores.write('\t'.join(map(str, [seqid] + scoresNN + scoresHMM)) + '\n')            
 
         if startNN is not None and startHMM is not None:
-            if firstPositive:
-                firstPositive = False
+            # if firstPositive:
+            if outSummary is None:
+                # firstPositive = False
+                outSummary = open(filename + '.signal_peptides.tsv', 'wb')
                 outSummary.write('\t'.join(PRED_HEADER) + '\n')
 
             # 0123456789012345678901234-56
@@ -271,6 +274,9 @@ def processMultiFile(filename):
 
     try:
         outScores.close()
+    except:
+        pass
+    try:
         outSummary.close()
     except:
         pass
