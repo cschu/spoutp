@@ -47,7 +47,7 @@ def main(argv):
     jobs = set()
     for i in xrange(nJobs):
         fi = '%s.%i' % (argv[0], i)
-        cmd = 'bsub -q %s "source python-2.7.4; python %s/spoutp.py %s > %s.out"' % (queue, path_to_spoutp, fi, '/dev/null')
+        cmd = 'bsub -q %s "source python-2.7.4; python %s/spoutp.py %s > %s"' % (queue, path_to_spoutp, fi, '/dev/null')
         sub = SP.Popen(cmd, shell=True, stdin=SP.PIPE, 
                        stdout=SP.PIPE, stderr=SP.PIPE)
         stdout, stderr = sub.communicate() 
