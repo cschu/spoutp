@@ -53,7 +53,7 @@ def main(argv):
         stdout, stderr = sub.communicate() 
 
         jobid = re.search('Job <([0-9]+)> is submitted', stdout)
-
+        print stdout, stderr
         try:
             jobs.add(jobid.groups()[0])
         except:
