@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source git-default
+cd $HOME/spoutp
+git pull
