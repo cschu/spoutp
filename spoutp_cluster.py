@@ -4,19 +4,19 @@ import re
 import os
 import glob
 import sys
-import subprocess
+import subprocess as SP
 import time
 import datetime
 
 import biolib as CSBio
 
-
+SPOUTP = 'spoutp.py'
 
 def main(argv):	
     logfile = open('spoutp_cluster.log', 'wb')
 
     nSeqs = len(list(CSBio.anabl_getContigsFromFASTA(argv[0])))
-    nJobs = max(10, int(argv[1]))
+    nJobs = min(10, int(argv[1]))
     packsize = int(float(nSeqs) / nJobs + 0.5)
 
     c, i = 0, 0
@@ -27,7 +27,10 @@ def main(argv):
             except:
                 pass
             fout = open(argv[0] + '.%i' % i, 'wb')
+            c = 0
+            i += 1
         fout.write('>%s\n%s\n' % (seqid, seq))
+        c += 1
     try:
         fout.close()
     except:
