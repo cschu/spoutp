@@ -21,6 +21,8 @@ def main(argv):
     nJobs = min(10, int(argv[1]))
     packsize = int(float(nSeqs) / nJobs + 0.5)
 
+    queue = argv[2] if len(argv) > 2 else 'TSL-Test128'
+
     c, i = 0, 0
     for seqid, seq in CSBio.anabl_getContigsFromFASTA(argv[0]):
         if c > packsize or i == 0:
@@ -42,7 +44,7 @@ def main(argv):
     jobs = set()
     for i in xrange(nJobs):
         fi = '%s.%i' % (argv[0], i)
-        cmd = 'bsub -q TSL-Test128 "source python-2.7.4; python %s %s > %s.out"' % (SPOUTP, fi, fi)
+        cmd = 'bsub -q %s "source python-2.7.4; python %s %s > %s.out"' % (queue, SPOUTP, fi, fi, '/dev/null')
         sub = SP.Popen(cmd, shell=True, stdin=SP.PIPE, 
                        stdout=SP.PIPE, stderr=SP.PIPE)
         stdout, stderr = sub.communicate() 
@@ -58,7 +60,7 @@ def main(argv):
     running = set(jobs)
     while True:        
         if not running: break
-        if os.path.exists('KILL_SPOUTP'): break
+        if os.path.exists('KILL_SPOUTP'): sys.exit(0)
         time.sleep(60)
         logfile.write('Jobs have been running since %s. %i jobs still running\n' % (start, len(jobs)))
         
@@ -67,20 +69,11 @@ def main(argv):
         
         running = set()
         for line in stdout.split('\n')[:-1]:
-            print line
             line = line.strip()
             if line.startswith('JOBID'): continue
             running.add(line.split()[0])
 
-        print 'RUNNinG:', running 
         running = jobs.intersection(running)
-
-        print 'JOBS:', jobs, running
-        # jobs = jobs - (jobs - running)
-        # print 'JOBS:', jobs
-    
-
-    
 
     logfile.close()
         
@@ -97,6 +90,9 @@ def main(argv):
         summary_scores.write('\n'.join(scores.read().split('\n')[1:]))
         summary_peptides.write('\n'.join(peptides.read().split('\n')[1:]))
 
+        scores.close()
+        peptides.close()
+        
     summary_scores.close()
     summary_peptides.close()
 
