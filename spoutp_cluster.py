@@ -56,7 +56,7 @@ def main(argv):
         time.sleep(60)
         logfile.write('Jobs have been running since %s. %i jobs still running\n' % (start, len(jobs)))
         
-        sub = SP.Popen('bjobs', shell=True, stderr=SP.PIPE, stdout.SP.PIPE)
+        sub = SP.Popen('bjobs', shell=True, stderr=SP.PIPE, stdout=SP.PIPE)
         stdout, stderr = sub.communicate()
         
         running = set()
