@@ -95,9 +95,6 @@ def main(argv):
         summary_peptides.write('\n'.join([line for line in peptides.split('\n')
                                           if not line.startswith('#')]))
 
-        scores.close()
-        peptides.close()
-        
         os.remove(argv[0] + '.%i.signal_scores.tsv' % i)
         os.remove(argv[0] + '.%i.signal_peptides.tsv' % i)
         os.remove(argv[0] + '.%i' % i)
