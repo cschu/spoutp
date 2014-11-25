@@ -21,7 +21,7 @@ def main(argv):
 
     c, i = 0, 0
     for seqid, seq in CSBio.anabl_getContigsFromFASTA(argv[0]):
-        if c == packsize or i == 0:
+        if c > packsize or i == 0:
             try:
                 fout.close()
             except:
