@@ -87,11 +87,13 @@ def main(argv):
     summary_peptides.write('\t'.join(PRED_HEADER) + '\n')
     
     for i in xrange(nJobs):
-        scores = open(argv[0] + '.%i.signal_scores.tsv' % i)
-        peptides = open(argv[0] + '.%i.signal_peptides.tsv' % i)
+        scores = open(argv[0] + '.%i.signal_scores.tsv' % i).read()
+        peptides = open(argv[0] + '.%i.signal_peptides.tsv' % i).read()
 
-        summary_scores.write('\n'.join(scores.read().split('\n')[1:]))
-        summary_peptides.write('\n'.join(peptides.read().split('\n')[1:]))
+        summary_scores.write('\n'.join([line for line in scores.split('\n')
+                                        if not line.startswith('#')]))
+        summary_peptides.write('\n'.join([line for line in peptides.split('\n')
+                                          if not line.startswith('#')]))
 
         scores.close()
         peptides.close()
