@@ -4,19 +4,19 @@ import re
 import os
 import glob
 import sys
-import subprocess
+import subprocess as SP
 import time
 import datetime
 
 import biolib as CSBio
 
-
+SPOUTP = 'spoutp.py'
 
 def main(argv):	
     logfile = open('spoutp_cluster.log', 'wb')
 
     nSeqs = len(list(CSBio.anabl_getContigsFromFASTA(argv[0])))
-    nJobs = max(10, int(argv[1]))
+    nJobs = min(10, int(argv[1]))
     packsize = int(float(nSeqs) / nJobs + 0.5)
 
     c, i = 0, 0
@@ -56,7 +56,7 @@ def main(argv):
         time.sleep(60)
         logfile.write('Jobs have been running since %s. %i jobs still running\n' % (start, len(jobs)))
         
-        sub = SP.Popen('bjobs', shell=True, stderr=SP.PIPE, stdout.SP.PIPE)
+        sub = SP.Popen('bjobs', shell=True, stderr=SP.PIPE, stdout=SP.PIPE)
         stdout, stderr = sub.communicate()
         
         running = set()
