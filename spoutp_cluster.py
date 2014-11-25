@@ -9,6 +9,8 @@ import time
 import datetime
 
 import biolib as CSBio
+from spoutp import PRED_HEADER, SCORE_HEADER
+
 
 SPOUTP = 'spoutp.py'
 
@@ -77,14 +79,26 @@ def main(argv):
         # jobs = jobs - (jobs - running)
         # print 'JOBS:', jobs
     
+
+    
+
     logfile.close()
         
-        
+    summary_scores = open(argv[0] + '.signal_scores.tsv', 'wb')
+    summary_peptides = open(argv[0] + '.signal_peptides.tsv', 'wb')
 
-        
+    summary_scores.write('\t'.join(SCORE_HEADER) + '\n')
+    summary_peptides.write('\t'.join(PRED_HEADER) + '\n')
+    
+    for i in xrange(nJobs):
+        scores = open(argv[0] + '.%i.signal_scores.tsv' % i)
+        peptides = open(argv[0] + '.%i.signal_peptides.tsv' % i)
 
+        summary_scores.write('\n'.join(scores.read().split('\n')[1:]))
+        summary_peptides.write('\n'.join(peptides.read().split('\n')[1:]))
 
-
+    summary_scores.close()
+    summary_peptides.close()
 
 
 if __name__ == '__main__': main(sys.argv[1:])
