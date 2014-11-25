@@ -1,0 +1,8 @@
+#!/bin/bash
+
+source python-2.7.4
+
+PATH_TO_SPOUTP=$HOME/spoutp
+SPOUTP_CLUSTER=$PATH_TO_SPOUTP/spoutp_cluster.py
+
+python $SPOUTP_CLUSTER $1 $2 $PATH_TO_SPOUTP

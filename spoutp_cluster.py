@@ -12,16 +12,19 @@ import biolib as CSBio
 from spoutp import PRED_HEADER, SCORE_HEADER
 
 
-SPOUTP = 'spoutp.py'
+# SPOUTP = 'spoutp.py'
 
 def main(argv):	
     logfile = open('spoutp_cluster.log', 'wb')
 
     nSeqs = len(list(CSBio.anabl_getContigsFromFASTA(argv[0])))
     nJobs = min(10, int(argv[1]))
+
     packsize = int(float(nSeqs) / nJobs + 0.5)
 
     queue = argv[2] if len(argv) > 2 else 'TSL-Test128'
+    path_to_spoutp = argv[3] if len(argv) > 3 else '/usr/users/sl/schudomc/spoutp'
+    
 
     c, i = 0, 0
     for seqid, seq in CSBio.anabl_getContigsFromFASTA(argv[0]):
@@ -44,7 +47,7 @@ def main(argv):
     jobs = set()
     for i in xrange(nJobs):
         fi = '%s.%i' % (argv[0], i)
-        cmd = 'bsub -q %s "source python-2.7.4; python %s %s > %s.out"' % (queue, SPOUTP, fi, fi, '/dev/null')
+        cmd = 'bsub -q %s "source python-2.7.4; python %s/spoutp.py %s > %s.out"' % (queue, path_to_spoutp, fi, fi, '/dev/null')
         sub = SP.Popen(cmd, shell=True, stdin=SP.PIPE, 
                        stdout=SP.PIPE, stderr=SP.PIPE)
         stdout, stderr = sub.communicate() 
