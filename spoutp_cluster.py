@@ -27,7 +27,10 @@ def main(argv):
             except:
                 pass
             fout = open(argv[0] + '.%i' % i, 'wb')
+            c = 0
+            i += 1
         fout.write('>%s\n%s\n' % (seqid, seq))
+        c += 1
     try:
         fout.close()
     except:
