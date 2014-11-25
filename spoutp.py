@@ -348,8 +348,12 @@ def processFile(filename):
 
 class SpoutpTests(unittest.TestCase):
     SPOUTPDIR = './'
-    TESTMULTI = open(os.path.join(SPOUTPDIR, 'test', 'multi.fa.out.short'))
-    TESTSINGLE = open(os.path.join(SPOUTPDIR, 'test', 'avr2.fa.out'))
+    try:
+        TESTMULTI = open(os.path.join(SPOUTPDIR, 'test', 'multi.fa.out.short'))
+        TESTSINGLE = open(os.path.join(SPOUTPDIR, 'test', 'avr2.fa.out'))
+    except:
+        TESTMULTI = sys.stdin
+        TESTSINGLE = sys.stdin
     def test_processMultiSignalP3Output(self):
         self.failUnless(len(list(processMultiSignalP3Output(SpoutpTests.TESTMULTI.read()))) == 3)
     def test_processMultiSignalP3Output_withSingle(self):

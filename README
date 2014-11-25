@@ -1,0 +1,6 @@
+1. ssh software
+ 1a. cd spoutp
+ 1b. ./update
+ 1c. exit
+
+2. bsub -q TSL-Test128 "spoutp_cluster input_file num_threads<max 10>"
