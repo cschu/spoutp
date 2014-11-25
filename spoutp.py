@@ -9,7 +9,7 @@ import re
 import os
 import sys
 import subprocess as SP
-from itertools import chain
+from itertools import chain, izip
 
 import unittest
 
@@ -21,6 +21,29 @@ __license__ = 'MIT'
 __version__ = '0.1a'
 __maintainer__ = 'Christian Schudoma'
 __email__ = 'christian.schudoma@tsl.ac.uk'
+
+PRED_HEADER = ['#SeqID', 'NA_Seq', 'Pep_Seq',
+               'Pos_before_CleavageSite(NN)',
+               'Pos_after_CleavageSite(NN)',
+               'CleavageSite(NN)',
+               'NA_Seq_w/o_SigP(NN)',
+               # 'Pos_before_CleavageSite(HMM)',
+               # 'Pos_after_CleavageSite(HMM)',
+               # 'CleavageSite(HMM)',
+               # 'NA_Seq_w/o_SigP(HMM)',
+               ]
+SCORE_HEADER = ['#SeqID',
+               'NN_Cmax_score', 'NN_Cmax_pos', 'NN_Cmax_pred',
+               'NN_Ymax_score', 'NN_Ymax_pos', 'NN_Ymax_pred',
+               'NN_Smax_score', 'NN_Smax_pos', 'NN_Smax_pred',
+               'NN_Smean_score', 'NN_Smean_pos', 'NN_Smean_pred',
+               'NN_D_score', 'NN_D_pos', 'NN_D_pred',
+               'HMM_type',
+               'HMM_Cmax_score', 'HMM_Cmax_pos', 'HMM_Cmax_pred',
+               'HMM_Sprob_score', 'HMM_Sprob_pred'
+               ]
+    
+
 
 
 if os.uname()[1] == 'n98257':
@@ -43,6 +66,55 @@ def callSignalP3(seqid, peptide,
                    stdin=SP.PIPE, stdout=SP.PIPE, stderr=SP.PIPE)
     stdout, stderr = sub.communicate(input='>%s\n%s\n' % (seqid, peptide))
     return stdout
+
+def callMultiSignalP3(inputSequences,
+                      pathToSignalP=PATH_SIGNALP, sourceWrapper=SRC_WRAPPER):
+    """ 
+    Calls SignalP-3.0 for a single or multiple peptide sequences
+    and catches the output.
+    """
+    cmd = '%s%s -t euk' % (sourceWrapper, pathToSignalP)
+    sub = SP.Popen(cmd, shell=True, 
+                   stdin=SP.PIPE, stdout=SP.PIPE, stderr=SP.PIPE)
+    sequenceData = ['>%s\n%s' % (seqid, peptide) 
+                    for seqid, nucleic, peptide in inputSequences]
+    stdout, stderr = sub.communicate(input='\n'.join(sequenceData))
+    return stdout
+
+
+def processMultiSignalP3Output(output):
+    """
+    Processes SignalP-3.0 output of multiple sequences.
+    Should also properly process single sequences, therefore 
+    will replace old single sequence routine in the long run.
+    Returns only the result summaries, not the scoring
+    for the individual amino acids.
+    Returns iterator to (seqid, NN, HMM) tuples.
+    """
+    output = iter(output.split('\n'))
+
+    seqIDs, NN_gathered, HMM_gathered = [], [], []
+    for line in output:
+        if line.strip().startswith('-----'):
+            seqIDs.append(output.next().strip().strip('>'))
+        if line.strip().startswith('>'):
+            currLine = line
+            nextLine = output.next()
+            gathered = [currLine, nextLine]
+            if nextLine.strip().startswith('# Measure'):
+                gathered.extend([output.next() for line in xrange(6)])
+                NN_gathered.append(gathered)
+            elif nextLine.strip().startswith('Prediction'):
+                gathered.extend([output.next() for line in xrange(3)])
+                HMM_gathered.append(gathered)
+            else:
+                # ignore this sequence identifier, it is outside
+                # of an NN or HMM block
+                pass
+    # print NN_gathered, HMM_gathered
+    # for x,y in izip(NN_gathered, HMM_gathered): print x, y
+    return izip(seqIDs, NN_gathered, HMM_gathered)
+
 
 def processSignalP3Output(output):
     """
@@ -145,30 +217,70 @@ def parseSignalScores(NN_scores, HMM_scores):
 
     return list(chain.from_iterable([res.groups() if res is not None else ('','','')
                                 for res in NN_results])), HMM_results
+
+
+def processMultiFile(filename):
+    firstPositive = True
+    outSummary, outScores = None, None
+    inputSequences = CSBio.translateSequences(CSBio.anabl_getContigsFromFASTA(filename, truncate=6000))
+
+    seqDict = {seqID: (na_seq, aa_seq) 
+               for seqID, na_seq, aa_seq in inputSequences
+               if aa_seq}
+    # print seqDict
+
+    output = callMultiSignalP3(((seqID,) + seqDict[seqID] for seqID in seqDict))
+    for seqid, NNr, HMMr in processMultiSignalP3Output(output):
+        try:
+            startNN, endNN, startHMM, endHMM = parseSignalPrediction(NNr[-1], 
+                                                                     HMMr[-1])
+        except:
+            continue
+        try:
+            scoresNN, scoresHMM = parseSignalScores(NNr[2:-1], HMMr[1:])
+        except:
+            continue
+
+        if outSummary is None and outScores is None:
+            outSummary = open(filename + '.signal_peptides.tsv', 'wb')
+            outScores = open(filename + '.signal_scores.tsv', 'wb')
+            
+            
+        if scoresNN is not None and scoresHMM is not None:
+            if firstPositive:
+                outScores.write('\t'.join(SCORE_HEADER) + '\n')
+            outScores.write('\t'.join(map(str, [seqid] + scoresNN + scoresHMM)) + '\n')            
+
+        if startNN is not None and startHMM is not None:
+            if firstPositive:
+                firstPositive = False
+                outSummary.write('\t'.join(PRED_HEADER) + '\n')
+
+            # 0123456789012345678901234-56
+            # MVHATSPLLLLLLLSLALVAPSLSA-RK
+            #                       ***-**
+            csiteNN = '%s-%s' % (seqDict[seqid][1][startNN - 2:endNN], 
+                                 seqDict[seqid][1][endNN:endNN + 1])
+            csiteHMM = '%s-%s' % (seqDict[seqid][1][startHMM - 2:endHMM], 
+                                  seqDict[seqid][1][endHMM:endHMM + 1])
+            row = [seqid, seqDict[seqid][0], seqDict[seqid][1],
+                   endNN, endNN + 1, csiteNN, seqDict[seqid][0][(endNN + 1) * 3:],
+                   # endHMM, endHMM + 1, csiteHMM, na_seq[(endHMM + 1) * 3:]
+                   ]
+            outSummary.write('\t'.join(map(str, row)) + '\n')
+
+    try:
+        outScores.close()
+        outSummary.close()
+    except:
+        pass
+    pass
+
     
+
 
 def processFile(filename):
     firstPositive = True
-    predHeader = ['#SeqID', 'NA_Seq', 'Pep_Seq',
-                  'Pos_before_CleavageSite(NN)',
-                  'Pos_after_CleavageSite(NN)',
-                  'CleavageSite(NN)',
-                  'NA_Seq_w/o_SigP(NN)',
-                  # 'Pos_before_CleavageSite(HMM)',
-                  # 'Pos_after_CleavageSite(HMM)',
-                  # 'CleavageSite(HMM)',
-                  # 'NA_Seq_w/o_SigP(HMM)',
-                  ]
-    scoreHeader = ['#SeqID',
-                   'NN_Cmax_score', 'NN_Cmax_pos', 'NN_Cmax_pred',
-                   'NN_Ymax_score', 'NN_Ymax_pos', 'NN_Ymax_pred',
-                   'NN_Smax_score', 'NN_Smax_pos', 'NN_Smax_pred',
-                   'NN_Smean_score', 'NN_Smean_pos', 'NN_Smean_pred',
-                   'NN_D_score', 'NN_D_pos', 'NN_D_pred',
-                   'HMM_type',
-                   'HMM_Cmax_score', 'HMM_Cmax_pos', 'HMM_Cmax_pred',
-                   'HMM_Sprob_score', 'HMM_Sprob_pred'
-                   ]
     outSummary, outScores = None, None
 
     for seqid, na_seq in CSBio.anabl_getContigsFromFASTA(filename):
@@ -202,14 +314,14 @@ def processFile(filename):
 
         if scoresNN is not None and scoresHMM is not None:
             if firstPositive:
-                outScores.write('\t'.join(scoreHeader) + '\n')
+                outScores.write('\t'.join(SCORE_HEADER) + '\n')
             outScores.write('\t'.join(map(str, [seqid] + scoresNN + scoresHMM)) + '\n')
             
 
         if startNN is not None and startHMM is not None:
             if firstPositive:
                 firstPositive = False
-                outSummary.write('\t'.join(predHeader) + '\n')
+                outSummary.write('\t'.join(PRED_HEADER) + '\n')
 
             # 0123456789012345678901234-56
             # MVHATSPLLLLLLLSLALVAPSLSA-RK
@@ -234,16 +346,27 @@ def processFile(filename):
 
 ####
 
-class spoutpTests(unittest.TestCase):
+class SpoutpTests(unittest.TestCase):
+    SPOUTPDIR = './'
+    TESTMULTI = open(os.path.join(SPOUTPDIR, 'test', 'multi.fa.out.short'))
+    TESTSINGLE = open(os.path.join(SPOUTPDIR, 'test', 'avr2.fa.out'))
+    def test_processMultiSignalP3Output(self):
+        self.failUnless(len(list(processMultiSignalP3Output(SpoutpTests.TESTMULTI.read()))) == 3)
+    def test_processMultiSignalP3Output_withSingle(self):
+        self.failUnless(len(list(processMultiSignalP3Output(SpoutpTests.TESTSINGLE.read()))) == 1)
     pass
 
 
 
 def main(argv):
-    if argv[0] == '--TEST':
-        unittest.main()
+    if argv[0] == '--UNITTEST':
+        # unittest.main()
+        suite = unittest.TestLoader().loadTestsFromTestCase(SpoutpTests)
+        unittest.TextTestRunner(verbosity=2).run(suite)
+    elif argv[0] == '--TEST':
+        processMultiSignalP3Output(SpoutpTests.TESTOUTPUT)
     else:
-        processFile(argv[0])
+        processMultiFile(argv[0])
 
 
 

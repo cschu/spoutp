@@ -33,7 +33,8 @@ def isValidRNA(seq):
     """ Checks if a string only contains valid, non-ambiguous RNA symbols. """
     return len(re.sub('ACGU', '', seq.upper())) == 0
 
-def anabl_getContigsFromFASTA(fn):
+
+def anabl_getContigsFromFASTA(fn, truncate=None):
     """
     Returns generator object to access sequences from a multi-FASTA file.
     Originates from 'anabl' - BLAST analysing tool, hence the prefix.
@@ -42,11 +43,11 @@ def anabl_getContigsFromFASTA(fn):
     for line in open(fn):
         if line[0] == '>':
             if head is not None:
-                yield (head, seq)
+                yield (head, seq) if truncate is None else (head, seq[:truncate])
             head, seq = line.strip().strip('>'), ''
         else:
             seq += line.strip()
-    yield (head, seq)
+    yield (head, seq) if truncate is None else (head, seq[:truncate])
 
 def getCodonsFromSequence(seq):
     """
@@ -59,7 +60,12 @@ def getCodonsFromSequence(seq):
     for nt in it:
         try:
             yield nt + it.next() + it.next()
-        except:
+        except OSError:            
+            """
+            OSError needs to be caught to prevent
+            Exception RuntimeError: 'generator ignored GeneratorExit' 
+            in <generator object getCodonsFromSequence at 0x2383550> ignored
+            """
             pass
     pass
 
@@ -67,23 +73,40 @@ def isValidStartCodon(codon, altStarts=[VALID_START]):
     return reduce(lambda x,y: x | y, 
                   map(lambda x: x.match(codon) is not None, altStarts))
 
-def translateCDS(seq, codonTable=CODON_TABLE, altStart=[VALID_START]):
+def translateCDS(seq, codonTable=CODON_TABLE, altStart=None):
     """ 
     Translates a CDS into a protein sequence.
     Only takes CDS with valid start codons (NUG, with BUG => AUG) as input.
+    Currently only takes AUG.
     """
     peptide = ''
     checkStartCodon = True
-    for codon in getCodonsFromSequence(seq.strip().upper().replace('U', 'T')):
-        if checkStartCodon:
-            checkStartCodon = False
-            if not VALID_START.match(codon):
-                sys.stderr.write('INVALID START CODON: %s\n' % codon)
-                sys.exit(1)
-            codon = 'ATG'
-        peptide += codonTable.get(codon, 'X')
+    codons = getCodonsFromSequence(seq.strip().upper().replace('U', 'T'))    
+    if altStart is None and codonTable.get(codons.next(), 'X') != 'M':
+        pass
+    else:
+        try:
+            peptide = 'M' + ''.join([codonTable[codon] for codon in codons])
+        except:
+            pass
     return peptide
 
+
+def translateSequences(sequences, translate_f=translateCDS, altStart=None):
+    for seqid, na_seq in sequences:        
+        print translate_f(na_seq)
+        aa_seq = ''
+        try:
+            aa_seq = translate_f(na_seq)
+            # print aa_seq
+        except:
+            pass
+        if not aa_seq and na_seq.startswith('M'):
+            # in case amino acid sequence supplied instead of nucleic acids
+            aa_seq = na_seq
+            na_seq = 'N' * 3 * len(na_seq)
+        yield (seqid, na_seq, aa_seq)
+    pass
 
 
 class CSBioTests(unittest.TestCase):

@@ -1,0 +1,84 @@
+*********************** SignalP 3.0 predictions ***********************
+Using neural networks (NN) and hidden Markov models (HMM) trained on eukaryotes
+
+----------------------------------------------------------------------
+>seq1
+
+SignalP-NN result:
+>seq1                  length = 150
+
+# pos  aa    C       S       Y
+    1   M   0.008   0.982   0.000
+>seq1                  length = 150
+# Measure  Position  Value  Cutoff  signal peptide?
+  max. C    26       0.838   0.32   YES
+  max. Y    26       0.858   0.33   YES
+  max. S    14       0.998   0.87   YES
+  mean S     1-25    0.962   0.48   YES
+       D     1-25    0.910   0.43   YES
+# Most likely cleavage site between pos. 25 and 26: LSA-RK
+
+SignalP-HMM result:
+>seq1
+# pos  aa    C       S      n-reg   h-reg   c-reg
+    1   M   0.000   1.000   1.000   0.000   0.000
+>seq1
+Prediction: Signal peptide
+Signal peptide probability: 1.000
+Signal anchor probability: 0.000
+Max cleavage site probability: 0.574 between pos. 24 and 25
+
+----------------------------------------------------------------------
+>seq2
+
+SignalP-NN result:
+>seq2                  length = 150
+
+# pos  aa    C       S       Y
+    1   M   0.008   0.982   0.000
+>seq2                  length = 150
+# Measure  Position  Value  Cutoff  signal peptide?
+  max. C    26       0.838   0.32   YES
+  max. Y    26       0.858   0.33   YES
+  max. S    14       0.998   0.87   YES
+  mean S     1-25    0.962   0.48   YES
+       D     1-25    0.910   0.43   YES
+# Most likely cleavage site between pos. 25 and 26: LSA-RK
+
+SignalP-HMM result:
+>seq2
+# pos  aa    C       S      n-reg   h-reg   c-reg
+    1   M   0.000   1.000   1.000   0.000   0.000
+>seq2
+Prediction: Signal peptide
+Signal peptide probability: 1.000
+Signal anchor probability: 0.000
+Max cleavage site probability: 0.574 between pos. 24 and 25
+
+----------------------------------------------------------------------
+>seq3
+
+SignalP-NN result:
+>seq3                  length = 150
+
+# pos  aa    C       S       Y
+    1   M   0.008   0.982   0.000
+>seq3                  length = 150
+# Measure  Position  Value  Cutoff  signal peptide?
+  max. C    26       0.838   0.32   YES
+  max. Y    26       0.858   0.33   YES
+  max. S    14       0.998   0.87   YES
+  mean S     1-25    0.962   0.48   YES
+       D     1-25    0.910   0.43   YES
+# Most likely cleavage site between pos. 25 and 26: LSA-RK
+
+SignalP-HMM result:
+>seq3
+# pos  aa    C       S      n-reg   h-reg   c-reg
+    1   M   0.000   1.000   1.000   0.000   0.000
+>seq3
+Prediction: Signal peptide
+Signal peptide probability: 1.000
+Signal anchor probability: 0.000
+Max cleavage site probability: 0.574 between pos. 24 and 25
+
