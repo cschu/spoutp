@@ -21,7 +21,7 @@ def main(argv):
 
     c, i = 0, 0
     for seqid, seq in CSBio.anabl_getContigsFromFASTA(argv[0]):
-        if c == packsize or i == 0:
+        if c > packsize or i == 0:
             try:
                 fout.close()
             except:
@@ -40,7 +40,7 @@ def main(argv):
     jobs = set()
     for i in xrange(nJobs):
         fi = '%s.%i' % (argv[0], i)
-        cmd = 'bsub "source python-2.7.4; python %s %s > %s.out"' % (SPOUTP, fi, fi)
+        cmd = 'bsub -q TSL-Test128 "source python-2.7.4; python %s %s > %s.out"' % (SPOUTP, fi, fi)
         sub = SP.Popen(cmd, shell=True, stdin=SP.PIPE, 
                        stdout=SP.PIPE, stderr=SP.PIPE)
         stdout, stderr = sub.communicate() 
@@ -48,13 +48,14 @@ def main(argv):
         jobid = re.search('Job <([0-9]+)> is submitted', stdout)
 
         try:
-            jobs.add(jobid.groups(0))
+            jobs.add(jobid.groups()[0])
         except:
             logfile.write('Error: job with file %s could not be submitted.\n' % fi)
 
     start = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
+    running = set(jobs)
     while True:        
-        if not jobs: break
+        if not running: break
         if os.path.exists('KILL_SPOUTP'): break
         time.sleep(60)
         logfile.write('Jobs have been running since %s. %i jobs still running\n' % (start, len(jobs)))
@@ -63,12 +64,18 @@ def main(argv):
         stdout, stderr = sub.communicate()
         
         running = set()
-        for line in stdout.split('\n'):
+        for line in stdout.split('\n')[:-1]:
+            print line
             line = line.strip()
             if line.startswith('JOBID'): continue
             running.add(line.split()[0])
 
-        jobs = jobs - (jobs - running)
+        print 'RUNNinG:', running 
+        running = jobs.intersection(running)
+
+        print 'JOBS:', jobs, running
+        # jobs = jobs - (jobs - running)
+        # print 'JOBS:', jobs
     
     logfile.close()
         
