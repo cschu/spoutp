@@ -96,9 +96,9 @@ def main(argv):
         scores.close()
         peptides.close()
         
-        os.remove(argv[0] + '.%i.signal_scores.tsv' % i)
-        os.remove(argv[0] + '.%i.signal_peptides.tsv' % i)
-        os.remove(argv[0] + '.%i' % i)
+        #os.remove(argv[0] + '.%i.signal_scores.tsv' % i)
+        #os.remove(argv[0] + '.%i.signal_peptides.tsv' % i)
+        #os.remove(argv[0] + '.%i' % i)
 
     summary_scores.close()
     summary_peptides.close()
