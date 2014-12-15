@@ -78,7 +78,7 @@ def main(argv):
         stdout, stderr = sub.communicate() 
 
         jobid = re.search('Job <([0-9]+)> is submitted', stdout)
-
+        print stdout, stderr
         try:
             jobs.add(jobid.groups()[0])
         except:
@@ -121,10 +121,6 @@ def main(argv):
                                         if not line.startswith('#')]))
         summary_peptides.write('\n'.join([line for line in peptides.split('\n')
                                           if not line.startswith('#')]))
-
-        # os.remove(argv[0] + '.%i.signal_scores.tsv' % i)
-        # os.remove(argv[0] + '.%i.signal_peptides.tsv' % i)
-        # os.remove(argv[0] + '.%i' % i)
 
     shutil.rmtree(tmpdir)
 
