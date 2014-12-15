@@ -25,10 +25,10 @@ def main(argv):
     parser = argparse.ArgumentParser(description=descr)
     parser.add_argument('--input', help='Multi-Fasta file containing CDSs.')
     parser.add_argument('--output', help='Prefix for output files.')
-    parser.add_argument('--threads', help='Number of threads (max. 10).', type=oint, default=10)
+    parser.add_argument('--threads', help='Number of threads (max. 10).', type=int, default=10)
     parser.add_argument('--queue', default='TSL-Test128', help='Which queue to use (default: TSL-Test128).')
     parser.add_argument('--path-to-spoutp', help='Where is your installation of spoutp located?', default='/usr/users/sl/schudomc/spoutp')
-    parser.add_argument('--logfile', help='Name of logfile (default: spoutp_cluter.log')
+    parser.add_argument('--logfile', help='Name of logfile (default: spoutp_cluster.log)', default='spoutp_cluster.log')
     args = parser.parse_args()
 
 	
