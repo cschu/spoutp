@@ -3,4 +3,7 @@
  1b. ./update
  1c. exit
 
-2. bsub -q TSL-Test128 "spoutp_cluster input_file num_threads<max 10>"
+2. bsub -q TSL-Test128 "<path_to_spoutp_cluster> <input_file> <output_prefix> <num_threads, max=10>"
+
+# python $SPOUTP_CLUSTER --input=$1 --output=$2 --threads=$3 --queue=$DEFAULT_QUEUE --path-to-spoutp=$PATH_TO_SPOUTP
+

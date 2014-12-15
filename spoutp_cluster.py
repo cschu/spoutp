@@ -8,32 +8,56 @@ import subprocess as SP
 import time
 import datetime
 
+import argparse
+import tempfile
+import shutil
+
 import biolib as CSBio
 from spoutp import PRED_HEADER, SCORE_HEADER
 
 
 # SPOUTP = 'spoutp.py'
 
-def main(argv):	
-    logfile = open('spoutp_cluster.log', 'wb')
+def main(argv):
+    # bsub -q TSL-Test128 "spoutp_cluster input_file num_threads<max 10>"
+    # python $SPOUTP_CLUSTER $1 $2 $DEFAULT_QUEUE $PATH_TO_SPOUTP
+    descr = ''
+    parser = argparse.ArgumentParser(description=descr)
+    parser.add_argument('--input', help='Multi-Fasta file containing CDSs.')
+    parser.add_argument('--output', help='Prefix for output files.')
+    parser.add_argument('--threads', help='Number of threads (max. 10).', type=oint, default=10)
+    parser.add_argument('--queue', default='TSL-Test128', help='Which queue to use (default: TSL-Test128).')
+    parser.add_argument('--path-to-spoutp', help='Where is your installation of spoutp located?', default='/usr/users/sl/schudomc/spoutp')
+    parser.add_argument('--logfile', help='Name of logfile (default: spoutp_cluter.log')
+    args = parser.parse_args()
 
-    nSeqs = len(list(CSBio.anabl_getContigsFromFASTA(argv[0])))
-    nJobs = min(10, int(argv[1]))
+	
+    logfile = open(args.logfile, 'wb')
+    
+
+    nSeqs = len(list(CSBio.anabl_getContigsFromFASTA(args.input)))
+    nJobs = min(10, int(args.threads))
 
     packsize = int(float(nSeqs) / nJobs + 0.5)
 
-    queue = argv[2] if len(argv) > 2 else 'TSL-Test128'
-    path_to_spoutp = argv[3] if len(argv) > 3 else '/usr/users/sl/schudomc/spoutp'
-    
+    # queue = args.queue
+    # path_to_spoutp = args.spoutp
+
+    # tempfile.mkdtemp([suffix=''[, prefix='tmp'[, dir=None]]])
+    # tempfile.mkstemp([suffix=''[, prefix='tmp'[, dir=None[, text=False]]]])
+    tmpdir = tempfile.mkdtemp(dir='/tmp')
+    tmpfiles = []
 
     c, i = 0, 0
-    for seqid, seq in CSBio.anabl_getContigsFromFASTA(argv[0]):
+    for seqid, seq in CSBio.anabl_getContigsFromFASTA(args.input):
         if c > packsize or i == 0:
             try:
                 fout.close()
             except:
                 pass
-            fout = open(argv[0] + '.%i' % i, 'wb')
+            # fout = open(argv[0] + '.%i' % i, 'wb')
+            tmpfiles.append(tempfile.mkstemp(suffix='.%i' % i, dir=tempdir))
+            fout = open(tmpfiles[-1], 'wb')
             c = 0
             i += 1
         fout.write('>%s\n%s\n' % (seqid, seq))
@@ -45,9 +69,10 @@ def main(argv):
     
 
     jobs = set()
-    for i in xrange(nJobs):
-        fi = '%s.%i' % (argv[0], i)
-        cmd = 'bsub -q %s "source python-2.7.4; python %s/spoutp.py %s > %s"' % (queue, path_to_spoutp, fi, '/dev/null')
+    # for i in xrange(nJobs):
+    for i, fi in enumerate(tmpfiles):
+        # fi = '%s.%i' % (argv[0], i)
+        cmd = 'bsub -q %s "source python-2.7.4; python %s/spoutp.py %s > %s"' % (args.queue, args.path_to_spoutp, fi, '/dev/null')
         sub = SP.Popen(cmd, shell=True, stdin=SP.PIPE, 
                        stdout=SP.PIPE, stderr=SP.PIPE)
         stdout, stderr = sub.communicate() 
@@ -80,24 +105,28 @@ def main(argv):
 
     logfile.close()
         
-    summary_scores = open(argv[0] + '.signal_scores.tsv', 'wb')
-    summary_peptides = open(argv[0] + '.signal_peptides.tsv', 'wb')
+    summary_scores = open(args.output + '.signal_scores.tsv', 'wb')
+    summary_peptides = open(args.output + '.signal_peptides.tsv', 'wb')
 
     summary_scores.write('\t'.join(SCORE_HEADER) + '\n')
     summary_peptides.write('\t'.join(PRED_HEADER) + '\n')
     
-    for i in xrange(nJobs):
-        scores = open(argv[0] + '.%i.signal_scores.tsv' % i).read()
-        peptides = open(argv[0] + '.%i.signal_peptides.tsv' % i).read()
+    # for i in xrange(nJobs):
+    for i, fi in enumerate(tmpfiles):
+        # fi = argv[0] + '.%i' % i
+        scores = open(fi + '.signal_scores.tsv').read()
+        peptides = open(fi + '.signal_peptides.tsv').read()
 
         summary_scores.write('\n'.join([line for line in scores.split('\n')
                                         if not line.startswith('#')]))
         summary_peptides.write('\n'.join([line for line in peptides.split('\n')
                                           if not line.startswith('#')]))
 
-        os.remove(argv[0] + '.%i.signal_scores.tsv' % i)
-        os.remove(argv[0] + '.%i.signal_peptides.tsv' % i)
-        os.remove(argv[0] + '.%i' % i)
+        # os.remove(argv[0] + '.%i.signal_scores.tsv' % i)
+        # os.remove(argv[0] + '.%i.signal_peptides.tsv' % i)
+        # os.remove(argv[0] + '.%i' % i)
+
+    shutil.rmtree(tmpdir)
 
     summary_scores.close()
     summary_peptides.close()
