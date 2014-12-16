@@ -34,8 +34,10 @@ def main(argv):
 	
     logfile = open(args.logfile, 'wb')
     
-
-    nSeqs = len(list(CSBio.anabl_getContigsFromFASTA(args.input)))
+    seqs = [(sid, seq) 
+            for sid, seq in CSBio.anabl_getContigsFromFASTA(args.input)
+            if seq.startswith('ATG')]
+    nSeqs = len(seqs)
     nJobs = min(10, int(args.threads))
 
     packsize = int(float(nSeqs) / nJobs + 0.5)
@@ -50,6 +52,7 @@ def main(argv):
 
     c, i = 0, 0
     for seqid, seq in CSBio.anabl_getContigsFromFASTA(args.input):
+        if not seq.startswith('ATG'): continue
         if c > packsize or i == 0:
             try:
                 fout.close()
