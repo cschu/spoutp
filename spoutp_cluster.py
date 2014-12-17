@@ -122,10 +122,10 @@ def main(argv):
     for i, fi in enumerate(tmpfiles):
         # fi = argv[0] + '.%i' % i
         try: 
+            peptides = open(fi[1] + '.signal_peptides.tsv').read()
             scores = open(fi[1] + '.signal_scores.tsv').read()
         except:
             continue
-        peptides = open(fi[1] + '.signal_peptides.tsv').read()
 
         summary_scores.write('\n'.join([line for line in scores.split('\n')
                                         if not line.startswith('#')]))
