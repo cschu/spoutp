@@ -42,17 +42,22 @@ def main(argv):
 
     packsize = int(float(nSeqs) / nJobs + 0.5)
 
+    print nSeqs, nJobs, packsize
+
     # queue = args.queue
     # path_to_spoutp = args.spoutp
 
     # tempfile.mkdtemp([suffix=''[, prefix='tmp'[, dir=None]]])
     # tempfile.mkstemp([suffix=''[, prefix='tmp'[, dir=None[, text=False]]]])
-    tmpdir = tempfile.mkdtemp(dir='.')
+    workdir = os.path.join(os.path.expanduser('~'), 'spoutp_workdir')
+    if not os.path.exists(workdir):
+        os.mkdir(workdir)
+    tmpdir = tempfile.mkdtemp(dir=workdir)
     tmpfiles = []
 
     c, i = 0, 0
-    for seqid, seq in CSBio.anabl_getContigsFromFASTA(args.input):
-        if not seq.startswith('ATG'): continue
+    for seqid, seq in seqs: #CSBio.anabl_getContigsFromFASTA(args.input):
+        # if not seq.startswith('ATG'): continue
         if c > packsize or i == 0:
             try:
                 fout.close()
@@ -75,7 +80,7 @@ def main(argv):
     # for i in xrange(nJobs):
     for i, fi in enumerate(tmpfiles):
         # fi = '%s.%i' % (argv[0], i)
-        cmd = 'bsub -q %s "source python-2.7.4; python %s/spoutp.py %s > %s"' % (args.queue, args.path_to_spoutp, fi[1], '/dev/null')
+        cmd = 'bsub -q %s -We 480 "source python-2.7.4; python %s/spoutp.py %s > %s"' % (args.queue, args.path_to_spoutp, fi[1], '/dev/null')
         sub = SP.Popen(cmd, shell=True, stdin=SP.PIPE, 
                        stdout=SP.PIPE, stderr=SP.PIPE)
         stdout, stderr = sub.communicate() 
@@ -116,7 +121,10 @@ def main(argv):
     # for i in xrange(nJobs):
     for i, fi in enumerate(tmpfiles):
         # fi = argv[0] + '.%i' % i
-        scores = open(fi[1] + '.signal_scores.tsv').read()
+        try: 
+            scores = open(fi[1] + '.signal_scores.tsv').read()
+        except:
+            continue
         peptides = open(fi[1] + '.signal_peptides.tsv').read()
 
         summary_scores.write('\n'.join([line for line in scores.split('\n')
