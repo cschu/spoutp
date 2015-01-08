@@ -222,14 +222,19 @@ def parseSignalScores(NN_scores, HMM_scores):
 def processMultiFile(filename):
     firstPositive = True
     outSummary, outScores = None, None
+    open(filename + '.filename', 'wb').write(filename)
     inputSequences = CSBio.translateSequences(CSBio.anabl_getContigsFromFASTA(filename, truncate=6000))
-
     seqDict = {seqID: (na_seq, aa_seq) 
                for seqID, na_seq, aa_seq in inputSequences
                if aa_seq}
-    # print seqDict
+    open(filename + '.peptides', 'wb').write('\n'.join(['>%s\n%s' % (item[0], item[1][1]) for item in seqDict.items()]))
 
-    output = callMultiSignalP3(((seqID,) + seqDict[seqID] for seqID in seqDict))
+    input = ((seqID,) + seqDict[seqID] for seqID in seqDict) 
+    open(filename + '.sigp_input', 'wb').write('\n'.join(['>%s\n%s' % (item[0], item[2]) for item in input]))
+    input = ((seqID,) + seqDict[seqID] for seqID in seqDict) 
+  
+    output = callMultiSignalP3(input)
+    open(filename + '.sigp_output', 'wb').write(output)
     for seqid, NNr, HMMr in processMultiSignalP3Output(output):
         try:
             startNN, endNN, startHMM, endHMM = parseSignalPrediction(NNr[-1], 
