@@ -30,7 +30,7 @@ def main(argv):
 	
     logfile = open(args.logfile, 'wb')
     
-    seqs = [(sid, seq[:70]) 
+    seqs = [(sid, seq[:210]) 
             for sid, seq in CSBio.anabl_getContigsFromFASTA(args.input)
             if seq.startswith('ATG')]
     nSeqs = len(seqs)
