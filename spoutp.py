@@ -338,11 +338,11 @@ def processFile(filename):
             # MVHATSPLLLLLLLSLALVAPSLSA-RK
             #                       ***-**
             csiteNN = '%s-%s' % (aa_seq[startNN - 2:endNN], 
-                                 aa_seq[endNN:endNN + 1])
+                                 aa_seq[endNN:endNN + 2])
             csiteHMM = '%s-%s' % (aa_seq[startHMM - 2:endHMM], 
                                   aa_seq[endHMM:endHMM + 1])
             row = [seqid, na_seq, aa_seq, 
-                   endNN, endNN + 1, csiteNN, na_seq[(endNN + 1) * 3:],
+                   endNN, endNN + 1, csiteNN, na_seq[endNN  * 3:],
                    # endHMM, endHMM + 1, csiteHMM, na_seq[(endHMM + 1) * 3:]
                    ]
             outSummary.write('\t'.join(map(str, row)) + '\n')
