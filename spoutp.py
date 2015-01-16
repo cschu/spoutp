@@ -22,7 +22,7 @@ __version__ = '0.1a'
 __maintainer__ = 'Christian Schudoma'
 __email__ = 'christian.schudoma@tsl.ac.uk'
 
-PRED_HEADER = ['#SeqID', 'NA_Seq', 'Pep_Seq',
+PRED_HEADER = ['#SeqID', 'NA_Seq', 'Pep_Seq', 'seqlen_NA', 'seqlen_Pep',
                'Pos_before_CleavageSite(NN)',
                'Pos_after_CleavageSite(NN)',
                'CleavageSite(NN)',
@@ -219,11 +219,11 @@ def parseSignalScores(NN_scores, HMM_scores):
                                 for res in NN_results])), HMM_results
 
 
-def processMultiFile(filename):
+def processMultiFile(filename, maxAA=70):
     firstPositive = True
     outSummary, outScores = None, None
     open(filename + '.filename', 'wb').write(filename)
-    inputSequences = CSBio.translateSequences(CSBio.anabl_getContigsFromFASTA(filename, truncate=6000))
+    inputSequences = CSBio.translateSequences(CSBio.anabl_getContigsFromFASTA(filename))#, truncate=6000))
     seqDict = {seqID: (na_seq, aa_seq) 
                for seqID, na_seq, aa_seq in inputSequences
                if aa_seq}
@@ -231,7 +231,7 @@ def processMultiFile(filename):
 
     input = ((seqID,) + seqDict[seqID] for seqID in seqDict) 
     open(filename + '.sigp_input', 'wb').write('\n'.join(['>%s\n%s' % (item[0], item[2]) for item in input]))
-    input = ((seqID,) + seqDict[seqID] for seqID in seqDict) 
+    input = ((seqID,) + seqDict[seqID][:maxAA] for seqID in seqDict) 
   
     output = callMultiSignalP3(input)
     open(filename + '.sigp_output', 'wb').write(output)
@@ -271,8 +271,8 @@ def processMultiFile(filename):
                                  seqDict[seqid][1][endNN:endNN + 1])
             csiteHMM = '%s-%s' % (seqDict[seqid][1][startHMM - 2:endHMM], 
                                   seqDict[seqid][1][endHMM:endHMM + 1])
-            row = [seqid, seqDict[seqid][0], seqDict[seqid][1],
-                   endNN, endNN + 1, csiteNN, seqDict[seqid][0][(endNN + 1) * 3:],
+            row = [seqid, seqDict[seqid][0], seqDict[seqid][1], len(seqDict[seqid][0]), len(seqDict[seqid][1]),
+                   endNN, endNN + 1, csiteNN, seqDict[seqid][0][endNN * 3:],
                    # endHMM, endHMM + 1, csiteHMM, na_seq[(endHMM + 1) * 3:]
                    ]
             outSummary.write('\t'.join(map(str, row)) + '\n')
@@ -341,7 +341,7 @@ def processFile(filename):
                                  aa_seq[endNN:endNN + 2])
             csiteHMM = '%s-%s' % (aa_seq[startHMM - 2:endHMM], 
                                   aa_seq[endHMM:endHMM + 1])
-            row = [seqid, na_seq, aa_seq, 
+            row = [seqid, na_seq, aa_seq, len(na_seq), len(aa_seq),
                    endNN, endNN + 1, csiteNN, na_seq[endNN  * 3:],
                    # endHMM, endHMM + 1, csiteHMM, na_seq[(endHMM + 1) * 3:]
                    ]
