@@ -7,5 +7,5 @@ SPOUTP_CLUSTER=$PATH_TO_SPOUTP/spoutp_cluster.py
 DEFAULT_QUEUE=TSL-Test128
 
 # python $SPOUTP_CLUSTER $1 $2 $DEFAULT_QUEUE $PATH_TO_SPOUTP
-python $SPOUTP_CLUSTER --input=$1 --output=$2 --threads=$3 --queue=$DEFAULT_QUEUE --path-to-spoutp=$PATH_TO_SPOUTP 
+python $SPOUTP_CLUSTER --input=$1 --output=$2 --threads=$3 --queue=$DEFAULT_QUEUE --path-to-spoutp=$PATH_TO_SPOUTP --logfile=$2.log 
 

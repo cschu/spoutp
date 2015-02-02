@@ -18,9 +18,9 @@ from spoutp import PRED_HEADER, SCORE_HEADER
 CHECK_JOBQUEUE_INTERVAL = 30 # check for free jobs every 30 seconds
 MAX_LEN_NT = 210 # max use first 70 aas
 MAX_JOBS = 10
-MAX_SEQUENCES = 2000 # wish i could increase that, but 3k, 3.5k, 4k all result in "error running HOW"
+MAX_SEQUENCES = 1500 # wish i could increase that, but 3k, 3.5k, 4k all result in "error running HOW"
 
-def processOutput(summary_scores, summary_peptides, tmpfiles, workdir, logfile):
+def processOutput(summary_scores, summary_peptides, seqDict, tmpfiles, workdir, logfile):
 
     summary_scores.write('\t'.join(SCORE_HEADER) + '\n')
     summary_peptides.write('\t'.join(PRED_HEADER) + '\n')
@@ -115,17 +115,18 @@ def updateQueue(queue, maxJobs):
     # queue.difference_update(queue.difference(running)) 
     return running, maxJobs - len(running) #len(queue)
 
-def createChunk(seqs, chunksize, workdir):
+def createChunk(seqs, chunksize, workdir):#, maxNT):
     tmpfile = tempfile.mkstemp(dir=workdir)[1]
     hasData, isEmpty = False, False
     fout = open(tmpfile, 'wb')
     for i in xrange(chunksize):
         try:
-            fout.write('>%s\n%s\n' % seqs.next()) 
+            sid, seq = seqs.next()
         except:
             isEmpty = True
             break
         hasData = True
+        fout.write('>%s\n%s\n' % (sid, seq))
     fout.close() 
     if not hasData:
         tmpfile = None      
@@ -155,9 +156,10 @@ def submitJob(queue, fn, hpc_queue, path_to_spoutp, logfile, is_debug):
 def runJobs(args, maxNT=MAX_LEN_NT, maxSequences=MAX_SEQUENCES, maxJobs=MAX_JOBS):
     logfile = open(args.logfile, 'wb')
 
-    seqs = [(sid, seq[:maxNT]) 
+    
+    seqs = [(sid.split(' ')[0], seq)#[:maxNT]) 
             for sid, seq in CSBio.anabl_getContigsFromFASTA(args.input)
-            if seq.startswith('ATG')][:35678]
+            if seq.startswith('ATG')]# [:35678]
     print 'Done reading sequences'
     nJobs = min(MAX_JOBS, int(args.threads))
 
@@ -198,6 +200,7 @@ def runJobs(args, maxNT=MAX_LEN_NT, maxSequences=MAX_SEQUENCES, maxJobs=MAX_JOBS
 
     processOutput(open(args.output + '.signal_scores.tsv', 'wb'),
                   open(args.output + '.signal_peptides.tsv', 'wb'),
+                  None, #dict(seqs), # can be removed again if this works!
                   tmpfiles,
                   workdir,
                   logfile)
