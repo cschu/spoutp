@@ -22,6 +22,13 @@ bsub -q $QUEUE "$SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023
 
 #bsub -q $QUEUE "$SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22378.dat classified_mi168 10"
 #bsub -q $QUEUE "$SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22380.dat unclassified_mi168 10"
+# bsub -q $QUEUE "$SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22373.dat classified_mi72 10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22375.dat unclassified_mi72 10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22369.dat classified_mi36 10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22371.dat unclassified_mi36 10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22365.dat classified_mi24 10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22367.dat unclassified_mi24 10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22351.dat classified_mi0 10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22353.dat unclassified_mi0 10"
+
+# bsub -q $QUEUE "$SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023/dataset_23928.dat Go5_spot_0h_C   10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023/dataset_23930.dat Go5_spot_0h_U   10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023/dataset_23932.dat Go5_spot_24h_C  10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023/dataset_23934.dat Go5_spot_24h_U  10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023/dataset_23936.dat Go5_spot_48h_C  10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023/dataset_23938.dat Go5_spot_48h_U  10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023/dataset_23940.dat Go5_spot_468_C 10; $SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/023/dataset_23942.dat Go5_spot_468_U 10"
+
+
+bsub -q $QUEUE "$SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22378.dat classified_mi168 10"
+bsub -q $QUEUE "$SPOUTP /tsl/services/galaxy/dist/galaxy-dist/database/files/022/dataset_22380.dat unclassified_mi168 10"
 
 
 

@@ -20,6 +20,7 @@ MAX_LEN_NT = 210 # max use first 70 aas
 MAX_JOBS = 10
 MAX_SEQUENCES = 1000 # wish i could increase that, but 3k, 3.5k, 4k all result in "error running HOW"
 
+
 def processOutput(summary_scores, summary_peptides, seqDict, tmpfiles, workdir, logfile):
 
     summary_scores.write('\t'.join(SCORE_HEADER) + '\n')

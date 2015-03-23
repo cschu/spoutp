@@ -64,10 +64,10 @@ def callMultiSignalP3(inputSequences,
     cmd = '%s%s -t euk' % (sourceWrapper, pathToSignalP)
     sub = SP.Popen(cmd, shell=True, 
                    stdin=SP.PIPE, stdout=SP.PIPE, stderr=SP.PIPE)
-    sequenceData = ['>%s\n%s\n' % (seqid, peptide) 
+    sequenceData = ['>%s\n%s' % (seqid, peptide) 
                     for seqid, peptide in inputSequences]
-    stdout, stderr = sub.communicate(input=''.join(sequenceData))
-    return stdout, stderr
+    stdout, stderr = sub.communicate(input='\n'.join(sequenceData))
+    return stdout
 
 
 def processMultiSignalP3Output(output):
@@ -211,7 +211,7 @@ def processMultiFile(filename, maxAA=70):
     firstPositive = True
     outSummary, outScores = None, None
     open(filename + '.filename', 'wb').write(filename)
-    inputSequences = CSBio.translateSequences(CSBio.anabl_getContigsFromFASTA(filename))
+    inputSequences = CSBio.translateSequences(CSBio.anabl_getContigsFromFASTA(filename))#, truncate=6000))
     seqDict = {seqID: (na_seq, aa_seq) 
                for seqID, na_seq, aa_seq in inputSequences
                if aa_seq}
@@ -228,42 +228,6 @@ def processMultiFile(filename, maxAA=70):
                                                   filename, seqDict, 
                                                   outScores=outScores, 
                                                   outSummary=outSummary)
-        """
-        try:
-            startNN, endNN, startHMM, endHMM = parseSignalPrediction(NNr[-1], 
-                                                                     HMMr[-1])
-        except:
-            continue
-        try:
-            scoresNN, scoresHMM = parseSignalScores(NNr[2:-1], HMMr[1:])
-        except:
-            continue
-
-        if scoresNN is not None and scoresHMM is not None:
-            if outScores is None:
-                outScores = open(filename + '.signal_scores.tsv', 'wb')
-                outScores.write('\t'.join(SCORE_HEADER) + '\n')
-            outScores.write('\t'.join(map(str, [seqid] + scoresNN + scoresHMM)) + '\n')            
-
-        if startNN is not None and startHMM is not None:
-            if outSummary is None:
-                outSummary = open(filename + '.signal_peptides.tsv', 'wb')
-                outSummary.write('\t'.join(PRED_HEADER) + '\n')
-
-            # 0123456789012345678901234-56
-            # MVHATSPLLLLLLLSLALVAPSLSA-RK
-            #                       ***-**
-            csiteNN = '%s-%s' % (seqDict[seqid][1][startNN - 2:endNN], 
-                                 seqDict[seqid][1][endNN:endNN + 1])
-            csiteHMM = '%s-%s' % (seqDict[seqid][1][startHMM - 2:endHMM], 
-                                  seqDict[seqid][1][endHMM:endHMM + 1])
-            row = [seqid, seqDict[seqid][0], seqDict[seqid][1], len(seqDict[seqid][0]), len(seqDict[seqid][1]),
-                   endNN, endNN + 1, csiteNN, seqDict[seqid][0][endNN * 3:],
-                   # endHMM, endHMM + 1, csiteHMM, na_seq[(endHMM + 1) * 3:]
-                   ]
-            outSummary.write('\t'.join(map(str, row)) + '\n')
-        """
-
     try:
         outScores.close()
     except:
@@ -274,6 +238,72 @@ def processMultiFile(filename, maxAA=70):
         pass
     pass
 
+def processFile(filename):
+    firstPositive = True
+    outSummary, outScores = None, None
+
+    for seqid, na_seq in CSBio.anabl_getContigsFromFASTA(filename):
+        try:
+            aa_seq = CSBio.translateCDS(na_seq)        
+        except:
+            # this allows to take peptide sequences as input
+            # not the best style
+            # in that case, the na_seq will be generic and thus unusable
+            aa_seq = na_seq
+            na_seq = 'N' * len(na_seq) * 3
+        output = callSignalP3(seqid, aa_seq)
+        NNo, NNr, HMMo, HMMr = processSignalP3Output(output)
+
+        # print HMMo
+        # print HMMr
+        try:
+            startNN, endNN, startHMM, endHMM = parseSignalPrediction(NNr[-1], 
+                                                                     HMMr[-1])
+        except:
+            continue
+        try:
+            scoresNN, scoresHMM = parseSignalScores(NNr[2:-1], HMMr[1:])
+        except:
+            continue
+
+        if outSummary is None and outScores is None:
+            outSummary = open(filename + '.signal_peptides.tsv', 'wb')
+            outScores = open(filename + '.signal_scores.tsv', 'wb')
+
+
+        if scoresNN is not None and scoresHMM is not None:
+            if firstPositive:
+                outScores.write('\t'.join(SCORE_HEADER) + '\n')
+            outScores.write('\t'.join(map(str, [seqid] + scoresNN + scoresHMM)) + '\n')
+            
+
+        if startNN is not None and startHMM is not None:
+            if firstPositive:
+                firstPositive = False
+                outSummary.write('\t'.join(PRED_HEADER) + '\n')
+
+            # 0123456789012345678901234-56
+            # MVHATSPLLLLLLLSLALVAPSLSA-RK
+            #                       ***-**
+            csiteNN = '%s-%s' % (aa_seq[startNN - 2:endNN], 
+                                 aa_seq[endNN:endNN + 2])
+            csiteHMM = '%s-%s' % (aa_seq[startHMM - 2:endHMM], 
+                                  aa_seq[endHMM:endHMM + 1])
+            row = [seqid, na_seq, aa_seq, len(na_seq), len(aa_seq),
+                   endNN, endNN + 1, csiteNN, na_seq[endNN  * 3:],
+                   # endHMM, endHMM + 1, csiteHMM, na_seq[(endHMM + 1) * 3:]
+                   ]
+            outSummary.write('\t'.join(map(str, row)) + '\n')
+
+    try:
+        outScores.close()
+        outSummary.close()
+    except:
+        pass
+    pass
+
+
+####
 
 class SpoutpTests(unittest.TestCase):
     SPOUTPDIR = './'
