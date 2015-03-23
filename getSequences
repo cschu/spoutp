@@ -1,0 +1,6 @@
+#!/bin/bash
+
+PYSCRIPT=/usr/users/sl/schudomc/spoutp/getSequences.py
+
+source python-2.7.4
+cut -f 1 $1 | sort -u | python $PYSCRIPT $2 > $3

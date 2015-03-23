@@ -33,6 +33,25 @@ def isValidRNA(seq):
     """ Checks if a string only contains valid, non-ambiguous RNA symbols. """
     return len(re.sub('ACGU', '', seq.upper())) == 0
 
+def anabl_getReadsFromFastQ(fn):
+    it = open(fn)
+    while 1:
+        id_, seq, sep, qual = map(lambda x:x.strip(), 
+                                  [it.next() for i in xrange(4)])
+        yield id_[1:], seq, qual
+    it.close()
+    pass
+
+def splitFQ(fn):
+    fo1 = open(fn + '.R1.fq', 'wb')
+    fo2 = open(fn + '.R2.fq', 'wb')
+    for id_, seq, qual in anabl_getReadsFromFastQ(fn):
+        id_ = id_.strip('/1')
+        p = len(seq)/2
+        fo1.write('@%s/1\n%s\n+\n%s\n' % (id_, seq[:p], qual[:p]))
+        fo2.write('@%s/2\n%s\n+\n%s\n' % (id_, seq[p:], qual[p:]))
+    [fo1.close(), fo2.close()]
+    pass 
 
 def anabl_getContigsFromFASTA(fn, truncate=None):
     """

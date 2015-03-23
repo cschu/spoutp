@@ -18,7 +18,7 @@ from spoutp import PRED_HEADER, SCORE_HEADER
 CHECK_JOBQUEUE_INTERVAL = 30 # check for free jobs every 30 seconds
 MAX_LEN_NT = 210 # max use first 70 aas
 MAX_JOBS = 10
-MAX_SEQUENCES = 2000 # wish i could increase that, but 3k, 3.5k, 4k all result in "error running HOW"
+MAX_SEQUENCES = 1000 # wish i could increase that, but 3k, 3.5k, 4k all result in "error running HOW"
 
 def processOutput(summary_scores, summary_peptides, seqDict, tmpfiles, workdir, logfile):
 
@@ -46,13 +46,15 @@ def processOutput(summary_scores, summary_peptides, seqDict, tmpfiles, workdir, 
             peptides = open(fi + '.signal_peptides.tsv').read()
         except:
             logfile.write('Cannot open file: %s\n' % (fi + '.signal_peptides.tsv'))
-            problematic_chunks.add((fi, 'no_pred'))
+            fsize = len([line for line in open(fi + '.sigp_input') if line.startswith('>')])
+            problematic_chunks.add((fi, 'no_pred (%i)' % fsize))
             continue
         try:
             scores = open(fi + '.signal_scores.tsv').read()
         except:
             logfile.write('Cannot open file: %s\n' % (fi + '.signal_scores.tsv'))
-            problematic_chunks.add((fi, 'no_scores'))
+            fsize = len([line for line in open(fi + '.sigp_input') if line.startswith('>')])
+            problematic_chunks.add((fi, 'no_scores (%i)' % fsize))
             continue
          
 
@@ -164,7 +166,7 @@ def runJobs(args, maxNT=MAX_LEN_NT, maxSequences=MAX_SEQUENCES, maxJobs=MAX_JOBS
     nJobs = min(MAX_JOBS, int(args.threads))
 
     workdir = getWorkingDirectory()
-    open('workdir.name', 'wb').write(workdir)
+    # open('workdir.name', 'wb').write(workdir)
     nSeqs = len(seqs)                                       
     chunksize = min(maxSequences, int(float(nSeqs) / nJobs + 0.5))   
     print nSeqs, chunksize
